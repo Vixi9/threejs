@@ -2,7 +2,7 @@ import './style.css'
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
 
 let scene, camera, renderer, controls, speed;
@@ -23,7 +23,7 @@ function init() {
   // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x250025);
-  scene.fog = new THREE.Fog(0x000000, 25, 60);
+  scene.fog = new THREE.Fog(0x250025, 25, 60);
 
   // Cameras
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
@@ -31,9 +31,13 @@ function init() {
   camera.rotation.x = -0.1
 
   // Render
-  renderer = new THREE.WebGLRenderer();
+  renderer = new THREE.WebGLRenderer({
+    physicallyCorrectLight: true
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.localClippingEnabled = true;
+  renderer.toneMapping = THREE.ReinhardToneMapping;
+  renderer.toneMappingExposure = 2.3;
 
   // Clipping
   const localPlane = new THREE.Plane( new THREE.Vector3( 0, 0, 1 ), 50 );
@@ -43,13 +47,17 @@ function init() {
     map: texture,
     fog: false
   }));
-  
   sun.position.z = -50;
   scene.add(sun);
   
   // Lights
-  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1);
-  scene.add(ambientLight);
+  const sunLight = new THREE.SpotLight(0xFFF500);
+  sunLight.position.set(0, 4, -50);
+  sunLight.lookAt(0, 0, 0);
+  scene.add(sunLight);
+
+  const hemisphereLight = new THREE.HemisphereLight(0xFFFFFF, 0x250025, 1);
+  scene.add(hemisphereLight);
   
   // Terrain
   const terrainGeometry = new THREE.PlaneBufferGeometry(50, 50, 25, 25);
@@ -73,13 +81,13 @@ function init() {
   scene.add(terrain1, terrain2);
 
   // Car
-  const objLoader = new GLTFLoader();
-  objLoader.load('assets/models/testarossa.glb', function( object ) {
-    car = object;
-    car.scene.position.z = -4;
-    car.scene.position.y = 0.15;
-    car.scene.rotation.y = Math.PI;
-    scene.add(car.scene);
+  const colladaLoader = new ColladaLoader();
+  colladaLoader.load('assets/models/testarossa.dae', function( object ) {
+    car = object.scene;
+    car.position.z = -4;
+    car.position.y = 0.15;
+    car.rotation.z = Math.PI;
+    scene.add(car);
     console.log("Succesfuly loaded 3D models")
   }, 
   function ( xhr ) {
@@ -93,7 +101,7 @@ function init() {
   speed = {
     x: 0,
     y: 0,
-    z: 0.4
+    z: 0.1
   };
 
   const gui = new GUI();
@@ -142,17 +150,4 @@ function animate() {
 
 function render() {
   renderer.render(scene, camera);
-}
-
-function switchCamera(camera) {
-  if(camera == 1) {
-    scene.activeCamera = camera;
-  } else {
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.y = 50;
-    camera.position.x = -25;
-    camera.rotation.x = -Math.PI / 2;
-    camera.rotation.z = -Math.PI / 2;
-    camera.rotation.y = -Math.PI / 8;
-  }
 }
